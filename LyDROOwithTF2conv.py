@@ -18,18 +18,15 @@ import numpy as np                         # import numpy
 from memoryTF2conv import MemoryDNN
 # from optimization import bisection
 from ResourceAllocation import Algo1_NUM
-from system_params import d_th, scale_delay, V
-from User import *
-
-
-import math
+from system_params import *
+from User import User
 
 import time
 
 import os 
 
 def create_img_folder(): 
-    path = f'./V=1e{V},dth={d_th},lambda={lambda_param}/'
+    path = f'./V=1e{V},dth={d_th},lambda={lambda_param},n={n}/'
     os.makedirs(path, exist_ok=True)
     print(f"Directory {os.getcwd()}")
     return path 
@@ -66,9 +63,7 @@ if __name__ == "__main__":
     path = create_img_folder()
     V = 10**V
 
-    N = 10                # number of users
-    n = 50              # number of time frames
-    K = N                   # initialize K = N
+    K = N                 # initialize K = N
 
     arrival_lambda = lambda_param*np.ones((N)) # 1.5 Mbps per user
 
@@ -78,21 +73,19 @@ if __name__ == "__main__":
     channel = np.zeros((n,N)) # chanel gains
     dataA = np.zeros((n,N)) # arrival data size
 
-    init_location = [[110, np.pi/4, np.pi, 1.5], 
-        [110, np.pi*3/4, 0, 0],
-        [10, 0, np.pi*3/4, 0.9],
-        [80, -3/4*np.pi, np.pi/6, 1.5],
-        [110, -3/4*np.pi, np.pi/12, 1.5],
-        [110, np.pi/4, np.pi, 1.5], 
-        [110, np.pi*3/4, 0, 0],
-        [10, 0, np.pi*3/4, 0.9],
-        [80, -3/4*np.pi, np.pi/6, 1.5],
-        [110, -3/4*np.pi, np.pi/12, 1.5]]
+    init_location = [(110, np.pi/4, np.pi, 1.5), 
+        (110, np.pi*3/4, 0, 0),
+        (10, 0, np.pi*3/4, 0.9),
+        (80, -3/4*np.pi, np.pi/6, 1.5),
+        (110, -3/4*np.pi, np.pi/12, 1.5),
+        (110, np.pi/4, np.pi, 1.5), 
+        (110, np.pi*3/4, 0, 0),
+        (10, 0, np.pi*3/4, 0.9),
+        (80, -3/4*np.pi, np.pi/6, 1.5),
+        (110, -3/4*np.pi, np.pi/12, 1.5)]
 
     users = [User(iloc) for iloc in init_location]
     
-    for iuser in users: 
-        iuser.generate_channel_gain()
     
     mem = MemoryDNN(net = [N*3, 256, 128, N],
                     learning_rate = 0.01,
@@ -181,20 +174,21 @@ if __name__ == "__main__":
             b_i_t = np.zeros(N)
             # avarage local queue 
             if i_idx > 0: 
-                Q_i_t = np.mean(Q[:i_idx+1, :], axis=0) 
+                begin_idx = i_idx - 10 if i_idx > 10 else 0
+                Q_i_t = np.mean(Q[begin_idx:i_idx+1, :], axis=0) 
                 # average uav queue 
-                L_i_t = np.mean(L[:i_idx+1, :], axis=0)
+                L_i_t = np.mean(L[begin_idx:i_idx+1, :], axis=0)
                 # average arrival rate at remote queue 
-                b_i_t = np.mean(b[:i_idx, :], axis=0)
+                b_i_t = np.mean(b[begin_idx:i_idx, :], axis=0)
 
             d_i_t = Q_i_t/arrival_lambda + (1 - m)*1
         
             for iuser, bt in enumerate(b_i_t): 
                 if bt > 0: 
-                    d_i_t[iuser] = d_i_t[iuser] + m[iuser] *(1 + L_i_t[iuser]/bt)
+                    d_i_t[iuser] = d_i_t[iuser] + m[iuser]*(1 + L_i_t[iuser]/bt)
 
             # update the objective function
-            f_val = f_val + scale_delay*np.sum(1/2 * d_i_t**2 + d_i_t*(D[i_idx,:] - d_th))
+            # f_val = f_val + scale_delay*np.sum(1/2 * d_i_t**2 + d_i_t*(D[i_idx,:] - d_th))
 
             v_list.append(f_val)
             delay_list.append(d_i_t)
@@ -211,7 +205,7 @@ if __name__ == "__main__":
         # Obj[i_idx],rate[i_idx,:],energy[i_idx,:]  = r_list[k_idx_his[-1]]
         Obj[i_idx] = v_list[k_idx_his[-1]]
         delay[i_idx] = delay_list[k_idx_his[-1]]
-        tmp, a[i_idx,:],b[i_idx,:],c[i_idx,:], energy[i_idx, :] = r_list[k_idx_his[-1]]
+        tmp, a[i_idx,:],b[i_idx,:],c[i_idx,:], energy[i_idx, :] = r_list[k_idx_his[-1]]  
 
         print(f'local computation: a_i =', a[i_idx,:])
         print(f'offloading volume: b_i =', b[i_idx,:])
@@ -221,6 +215,7 @@ if __name__ == "__main__":
 
 
     total_time=time.time()-start_time
+    print(f'total time: {total_time}')
     mem.plot_cost(path_name=path+'TraningLoss')
 
     plot_rate(Q.sum(axis=1)/N, 100, 'User queue length', name=path+'UserQueue')
@@ -231,5 +226,5 @@ if __name__ == "__main__":
     print('Average time per channel:%s'%(total_time/n))
 
     # save all data
-    sio.savemat('./result_%d.mat'%N, {'input_h': channel/CHFACT,'data_arrival':dataA,'local_queue':Q,'uav_queue':L,'off_mode':mode_his,'rate':rate,'energy_consumption':energy,'data_rate':rate,'objective':Obj})
+    sio.savemat(path+'./result_%d.mat'%N, {'input_h': channel/CHFACT,'data_arrival':dataA,'local_queue':Q,'uav_queue':L,'off_mode':mode_his,'energy_consumption':energy,'delay':delay,'objective':Obj})
     print('completed!')

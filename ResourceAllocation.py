@@ -70,7 +70,7 @@ def Algo1_NUM(mode, h, Q, L, V=20):
     else:
         q1 = np.zeros((M1))
         l1 = np.zeros((M1))
-        b1 = np.zeros((M1))  # optimal offloading volumn
+        b1 = np.zeros((M1))  # optimal offloading volumne
         h1 = np.zeros((M1))
 
         for i in range(M1):

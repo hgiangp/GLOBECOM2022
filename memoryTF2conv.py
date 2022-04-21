@@ -11,12 +11,6 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import numpy as np
-import warnings 
-
-warnings.filterwarnings("ignore")
-
-print(tf.__version__)
-print(tf.keras.__version__)
 
 
 # DNN network for memory
@@ -100,7 +94,7 @@ class MemoryDNN:
         # train the DNN
         hist = self.model.fit(h_train, m_train, verbose=0)
         self.cost = hist.history['loss'][0]
-        assert(self.cost > 0)
+        # assert(self.cost > 0)
         self.cost_his.append(self.cost)
 
     def decode(self, h, k = 1, mode = 'OP'):
