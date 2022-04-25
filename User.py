@@ -125,10 +125,10 @@ class Location:
 if __name__ == '__main__':
     init_location = (110, np.pi/4, np.pi, 1.5)
     a = User(init_location=init_location)
-    a.generate_channel_gain()
     a.plot_location()
     # a.plot_channel_gain()
     plt.show()
+    print('Simulation complete')
 
 
 

@@ -1,70 +1,188 @@
 import numpy as np
 from scipy.optimize import minimize, Bounds, LinearConstraint
 
-def rosen(x): 
-    return sum(100*(x[1:] - (x[:-1])**2)**2 + (1 - x[:-1])**2)
 
-x0 = np.array([1.3, 0.7, 0.8, 1.9, 1.2])
-# res = minimize(rosen, x0=x0, method='nelder-mead', options={'xatol': 1e-8, 'disp': True})
-# print(res.x)
+# L = np.random.randint(5, 8, (3, 5))
+# print(L)
+# L = L.reshape(-1, 3)
+# print(L)
 
-# def rosen_der(x):
-#     xm = x[1:-1]
-#     xm_m1 = x[:-2]
-#     xm_p1 = x[2:]
-#     der = np.zeros_like(x)
-#     der[1:-1] = 200*(xm - xm_m1**2) - 400*(xm_p1 - xm**2)*xm - 2*(1 -xm)
-#     der[0] = -400*x[0]*(x[1]-x[0]**2) - 2*(1 - x[0])
-#     der[-1] = 200*(x[-1] - x[-2]**2)
-#     return der 
+def propagate(w, b, X, Y):
+    """
+    Implement the cost function and its gradient for the propagation explained above
 
-# def rosen_hess_p(x, p):
-#     x = np.asarray(x)
-#     Hp = np.zeros_like(x)
-#     Hp[0] = (1200*x[0]**2 - 400*x[1] + 2)*p[0] - 400*x[0]*p[1]
-#     Hp[1:-1] = -400*x[:-2]*p[:-2]+(202+1200*x[1:-1]**2-400*x[2:])*p[1:-1] \
-#                -400*x[1:-1]*p[2:]
-#     Hp[-1] = -400*x[-2]*p[-2] + 200*p[-1]
-#     return Hp
+    Arguments:
+    w -- weights, a numpy array of size (num_px * num_px * 3, 1)
+    b -- bias, a scalar
+    X -- data of size (num_px * num_px * 3, number of examples)
+    Y -- true "label" vector (containing 0 if non-cat, 1 if cat) of size (1, number of examples)
 
-# res = minimize(rosen, x0, method='BFGS', jac=rosen_der, options={'disp': True})
-# print(res.x)
+    Return:
+    cost -- negative log-likelihood cost for logistic regression
+    dw -- gradient of the loss with respect to w, thus same shape as w
+    db -- gradient of the loss with respect to b, thus same shape as b
+    
+    Tips:
+    - Write your code step by step for the propagation. np.log(), np.dot()
+    """
+    
+    m = X.shape[1]
+    
+    # FORWARD PROPAGATION (FROM X TO COST)
+    #(≈ 2 lines of code)
+    # compute activation
+    # A = ...
+    # compute cost by using np.dot to perform multiplication. 
+    # And don't use loops for the sum.
+    # cost = ...                                
+    # YOUR CODE STARTS HERE
+    z = np.dot(w.T, X) + b
+    print(z)
+    A = 1/(1 + np.exp(-z)) 
+    print(np.log(A))
+    print(Y)
 
-# res = minimize(rosen, x0, method='Newton-CG',
-#                jac=rosen_der, hessp=rosen_hess_p,
-#                options={'xtol': 1e-8, 'disp': False})
-# print(res)
 
-# bounds = Bounds([0, -0.5], [1.0, 2.0])
-# linear_constraint = LinearConstraint([[1, 2], [2, 1]], [-np.inf, 1], [1, 1])
 
-from system_params import *
+    
+    cost = - 1/m * np.sum(Y * np.log(A) + (1 - Y) * np.log(1 - A))
+    
+    # YOUR CODE ENDS HERE
 
-mode = np.asarray([1, 0, 0, 1, 1, 0, 1])
-f_iU_0 = np.asarray([1, 1, 1, 1])
-idx1=np.where(mode==1)[0]
-Q = np.asarray([11, 11, 12, 7, 7, 4, 13])
+    # BACKWARD PROPAGATION (TO FIND GRAD)
+    #(≈ 2 lines of code)
+    # dw = ...
+    # db = ...
+    # YOUR CODE STARTS HERE
+    
+    dw = 1/m * np.dot(X, (A - Y).T)
+    db = 1/m * np.sum(A - Y)
+    # YOUR CODE ENDS HERE
+    cost = np.squeeze(np.array(cost))
 
-def objective_func(f_iU):
-    return np.sum(-Q[idx1]*f_iU*delta/F + V*psi*kappa*delta*(f_iU**3))
+    
+    grads = {"dw": dw,
+             "db": db}
+    
+    return grads, cost
 
-def obj_der(f_iU): 
-    return -Q[idx1]*delta/F + V*psi*kappa*3*(f_iU**2)
+# GRADED FUNCTION: optimize
 
-def obj_hess(f_iU): 
-    return V*kappa*psi*delta*6*f_iU
+def optimize(w, b, X, Y, num_iterations=100, learning_rate=0.009, print_cost=False):
+    """
+    This function optimizes w and b by running a gradient descent algorithm
+    
+    Arguments:
+    w -- weights, a numpy array of size (num_px * num_px * 3, 1)
+    b -- bias, a scalar
+    X -- data of shape (num_px * num_px * 3, number of examples)
+    Y -- true "label" vector (containing 0 if non-cat, 1 if cat), of shape (1, number of examples)
+    num_iterations -- number of iterations of the optimization loop
+    learning_rate -- learning rate of the gradient descent update rule
+    print_cost -- True to print the loss every 100 steps
+    
+    Returns:
+    params -- dictionary containing the weights w and bias b
+    grads -- dictionary containing the gradients of the weights and bias with respect to the cost function
+    costs -- list of all the costs computed during the optimization, this will be used to plot the learning curve.
+    
+    Tips:
+    You basically need to write down two steps and iterate through them:
+        1) Calculate the cost and the gradient for the current parameters. Use propagate().
+        2) Update the parameters using gradient descent rule for w and b.
+    """
+    
+    w = copy.deepcopy(w)
+    b = copy.deepcopy(b)
+    
+    costs = []
+    
+    for i in range(num_iterations):
+        # (≈ 1 lines of code)
+        # Cost and gradient calculation 
+        # grads, cost = ...
+        # YOUR CODE STARTS HERE
+        
+        grads, cost = propagate(w, b, X, Y)
+        # YOUR CODE ENDS HERE
+        
+        # Retrieve derivatives from grads
+        dw = grads["dw"]
+        db = grads["db"]
+        
+        # update rule (≈ 2 lines of code)
+        # w = ...
+        # b = ...
+        # YOUR CODE STARTS HERE
+        w = w - learning_rate * dw
+        b -= learning_rate * db 
+        
+        # YOUR CODE ENDS HERE
+        
+        # Record the costs
+        if i % 100 == 0:
+            costs.append(cost)
+        
+            # Print the cost every 100 training iterations
+            if print_cost:
+                print ("Cost after iteration %i: %f" %(i, cost))
+    
+    params = {"w": w,
+              "b": b}
+    
+    grads = {"dw": dw,
+             "db": db}
+    
+    return params, grads, costs
 
-x = np.ones_like(idx1)
-bounds = Bounds(x*0, x*Q[idx1]*F/delta)
-linear_constraint = LinearConstraint(x, 0, f_u_max)
+# GRADED FUNCTION: predict
 
-f_iU_0 = np.ones_like(idx1)
-res = minimize(objective_func, f_iU_0, method='trust-constr', jac=obj_der, hess=obj_hess,
-               constraints=[linear_constraint], options={'verbose': 1, 'disp': True}, bounds=bounds)
+def predict(w, b, X):
+    '''
+    Predict whether the label is 0 or 1 using learned logistic regression parameters (w, b)
+    
+    Arguments:
+    w -- weights, a numpy array of size (num_px * num_px * 3, 1)
+    b -- bias, a scalar
+    X -- data of size (num_px * num_px * 3, number of examples)
+    
+    Returns:
+    Y_prediction -- a numpy array (vector) containing all predictions (0/1) for the examples in X
+    '''
+    
+    m = X.shape[1]
+    Y_prediction = np.zeros((1, m))
+    w = w.reshape(X.shape[0], 1)
+    
+    # Compute vector "A" predicting the probabilities of a cat being present in the picture
+    #(≈ 1 line of code)
+    # A = ...
+    # YOUR CODE STARTS HERE
+    
+    A = 1/(1 + np.exp( - (np.dot(w.T, X)))
+    # YOUR CODE ENDS HERE
+    
+    for i in range(A.shape[1]):
+        
+        # Convert probabilities A[0,i] to actual predictions p[0,i]
+        #(≈ 4 lines of code)
+        # if A[0, i] > ____ :
+        #     Y_prediction[0,i] = 
+        # else:
+        #     Y_prediction[0,i] = 
+        # YOUR CODE STARTS HERE
+        Y_prediction[0, i] = A > 0.5
+        
+        # YOUR CODE ENDS HERE
+    
+    return Y_prediction
 
-print(res.x)
-value = res.fun
-print(value)
+w =  np.array([[1.], [2]])
+b = 1.5
+X = np.array([[1., -2., -1.], [3., 0.5, -3.2]])
+Y = np.array([[1, 1, 0]])
+grads, cost = propagate(w, b, X, Y)
+
 print('Simulation finish!')
 
 
