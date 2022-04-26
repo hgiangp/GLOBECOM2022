@@ -90,14 +90,14 @@ def Algo1_NUM(mode, h, Q, L, V=20):
             
             energy[tmp_id] = (N0*W*delta/h1[i])*(2**(b1[i]*R/W/delta) - 1)
             
-            f0_val = f0_val - b1[i]*(q1[i]- l1[i]) + V*energy[tmp_id]
+            f0_val = f0_val - b1[i]*(q1[i]- psi_li*l1[i]) + V*energy[tmp_id]
 
             # optimize cpu frequency 
             f_hat = np.minimum(f_u_max, l1[i]*F/delta)
             f1[i] = np.minimum(np.sqrt(l1[i]/3/F/V/kappa/psi), f_hat)
             energy_uav_tmp = kappa*(f1[i]**3)*delta
             
-            f0_val = f0_val + V*psi*energy_uav_tmp - l1[i]*f1[i]*delta/F
+            f0_val = f0_val + V*psi*energy_uav_tmp - psi_li*l1[i]*f1[i]*delta/F
             energy_uav += energy_uav_tmp
 
         # update offloading volume 

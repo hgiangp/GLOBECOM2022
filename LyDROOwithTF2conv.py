@@ -28,7 +28,7 @@ import os
 
 def create_img_folder(): 
     # path = f'./V={V},dth={d_th},lambda={lambda_param},T={T},W={W},scale_delay={scale_delay}, psi = {psi}/'
-    path = "{}/img/V ={:.2e},dth={:},lambda={:},T={:},W={:.2e},scale_delay={:}, psi = {:}, f_u ={:.2e}/".format(os.getcwd(),
+    path = "{}/img_new/V ={:.2e},dth={:},lambda={:},T={:},W={:.2e},scale_delay={:}, psi = {:}, f_u ={:.2e}/".format(os.getcwd(),
      V, d_th, lambda_param, T, W, scale_delay, psi, f_u_max)
     os.makedirs(path, exist_ok=True)
     print(f"Directory {os.getcwd()}")
@@ -61,7 +61,7 @@ def plot_drift(Q, L, D, E, name, rolling_intv=50):
     plt.xlabel('Time Frames')
     plt.legend(['Q','L', 'D', 'E'])
     plt.savefig(name)
-    plt.show()
+    # plt.show()
 
 
 def plot_rate( rate_his, rolling_intv = 50, ylabel='Normalized Computation Rate', name='Average queue length'):
@@ -74,7 +74,7 @@ def plot_rate( rate_his, rolling_intv = 50, ylabel='Normalized Computation Rate'
 
 
     # mpl.style.use('seaborn')
-    # fig, ax = plt.subplots(figsize=(15,8))
+    fig, ax = plt.subplots(figsize=(15,8))
     plt.grid()
     plt.plot(np.arange(len(rate_array))+1, rate_array)
     plt.plot(np.arange(len(rate_array))+1, np.hstack(df.rolling(rolling_intv, min_periods=1).mean().values), 'b')
@@ -163,8 +163,8 @@ if __name__ == "__main__":
                 max_k = max(np.array(k_idx_his[-Delta:-1])%K) +1
             else:
                 max_k = k_idx_his[-1] +1
-            # K = min(max_k +1, N)
-            K = 40
+            K = min(max_k +1, N)
+        # K = 40
 
         i_idx = i
 
@@ -180,7 +180,8 @@ if __name__ == "__main__":
             
         channel[i,:] = h
         # real-time arrival generation
-        dataA[i,:] = np.random.poisson(arrival_lambda, size=(1, N))
+        # dataA[i,:] = np.random.poisson(arrival_lambda, size=(1, N))
+        dataA[i,:] = np.round(np.random.uniform(low=0, high=arrival_lambda*2, size=(1, N)))
 
 
         # 4) ‘Queueing module’ of LyDROO
@@ -210,6 +211,10 @@ if __name__ == "__main__":
         if d_norm == 0: 
             d_norm = 1 
         
+        # q_norm = 500
+        # l_norm = 500
+        # d_norm = d_th*scale_delay
+        # h_norm = 1e-12
 
         nn_input =np.vstack((h/h_norm, Q[i_idx,:]/q_norm, L[i_idx,:]/l_norm,D[i_idx, :]/d_norm)).transpose().flatten()
 
@@ -236,14 +241,16 @@ if __name__ == "__main__":
             b_i_t = np.zeros(N)
             # avarage local queue 
 
-            b_idx = np.maximum(0, i_idx - 20) 
-            Q_i_t = np.mean(Q[b_idx:i_idx+1, :] - (a_i + b_i), axis=0) 
+            b_idx = np.maximum(0, i_idx - 10) 
+            Q_i_t = np.mean(Q[b_idx:i_idx+1, :], axis=0) 
             # average uav queue 
-            L_i_t = np.mean(L[b_idx:i_idx+1, :] + b_i - c_i, axis=0)
+            L_i_t = np.mean(L[b_idx:i_idx+1, :], axis=0)
             # average arrival rate at remote queue 
-            b_i_t = np.mean(b[b_idx:i_idx+1, :] + b_i, axis=0)
+            b_i_t = np.mean(b[b_idx:i_idx+1, :], axis=0)
 
-            d_i_t = Q_i_t/arrival_lambda + (1 - m)*1
+            d_i_t = Q_i_t/arrival_lambda + (1 - m)*1 
+            # d_i_t = Q_i_t/arrival_lambda + (1 - m)*1 + m*(L_i_t/50 + 2)
+
         
             for iuser, bt in enumerate(b_i_t): 
                 if m[iuser] == 1 and bt != 0: 
@@ -251,6 +258,7 @@ if __name__ == "__main__":
 
             # update the objective function
             f_val = f_val + np.sum(1/2*(scale_delay*d_i_t)**2 + scale_delay*d_i_t*(D[i_idx,:] - scale_delay*d_th))
+            
 
             v_list.append(f_val)
             delay_list.append(d_i_t)
@@ -279,6 +287,7 @@ if __name__ == "__main__":
         print(f'remote computation: c_i =', c[i_idx,:])
         print(f'remote computation: energy_i =', energy[i_idx,:])
         print(f'fvalue = {v_list[k_idx_his[-1]]}')
+        print('\n')
 
 
     total_time=time.time()-start_time
