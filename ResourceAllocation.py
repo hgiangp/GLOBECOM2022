@@ -59,9 +59,6 @@ def Algo1_NUM(mode, h, Q, L, V=20):
 
     idx1 = np.where(mode == 1)[0]
     M1 = len(idx1)
-    f1_val = 0
-    f2_val = 0
-    f_iU = np.zeros((N))
     b_i = np.zeros((N))
     c_i = np.zeros((N))
 
@@ -74,21 +71,22 @@ def Algo1_NUM(mode, h, Q, L, V=20):
         b1 = np.zeros((M1))  # optimal offloading volumn
         h1 = np.zeros((M1))
         f1 = np.zeros((M1))
-
+        bwidth = W/M1 
         for i in range(M1):
             tmp_id = idx1[i]
             q1[i] = Q[tmp_id]
             l1[i] = L[tmp_id]
             h1[i] = h[tmp_id]
+        
 
             # objective value of remote offloading
             b_hat = np.minimum(q1[i], np.round(
-               W*delta/R *  np.log2(1 + p_i_max*h1[i]/N0/W)))
+               bwidth*delta/R *  np.log2(1 + p_i_max*h1[i]/N0/bwidth)))
             
             b1[i] = 0 if (q1[i] <= l1[i]) else np.maximum(0, np.minimum(
-                np.round(W*delta/R * np.log2(h1[i]*(q1[i] - l1[i])/(V*N0*R*np.log(2)))), b_hat))
+                np.round(bwidth*delta/R * np.log2(h1[i]*(q1[i] - l1[i])/(V*N0*R*np.log(2)))), b_hat))
             
-            energy[tmp_id] = (N0*W*delta/h1[i])*(2**(b1[i]*R/W/delta) - 1)
+            energy[tmp_id] = (N0*bwidth*delta/h1[i])*(2**(b1[i]*R/bwidth/delta) - 1)
             
             f0_val = f0_val - b1[i]*(q1[i]- psi_li*l1[i]) + V*energy[tmp_id]
 

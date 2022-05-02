@@ -241,20 +241,21 @@ if __name__ == "__main__":
             b_i_t = np.zeros(N)
             # avarage local queue 
 
-            b_idx = np.maximum(0, i_idx - 10) 
+            # b_idx = np.maximum(0, i_idx - 10) 
+            b_idx = 0 
             Q_i_t = np.mean(Q[b_idx:i_idx+1, :], axis=0) 
             # average uav queue 
             L_i_t = np.mean(L[b_idx:i_idx+1, :], axis=0)
             # average arrival rate at remote queue 
             b_i_t = np.mean(b[b_idx:i_idx+1, :], axis=0)
 
-            d_i_t = Q_i_t/arrival_lambda + (1 - m)*1 
+            d_i_t = Q_i_t/arrival_lambda + (1 - m)*1 + m*(L_i_t/50)
             # d_i_t = Q_i_t/arrival_lambda + (1 - m)*1 + m*(L_i_t/50 + 2)
 
         
-            for iuser, bt in enumerate(b_i_t): 
-                if m[iuser] == 1 and bt != 0: 
-                    d_i_t[iuser] = d_i_t[iuser] + m[iuser] *(2 + L_i_t[iuser]/bt)
+            # for iuser, bt in enumerate(b_i_t): 
+            #     if m[iuser] == 1 and bt != 0: 
+            #         d_i_t[iuser] = d_i_t[iuser] + m[iuser] *(2 + L_i_t[iuser]/bt)
 
             # update the objective function
             f_val = f_val + np.sum(1/2*(scale_delay*d_i_t)**2 + scale_delay*d_i_t*(D[i_idx,:] - scale_delay*d_th))
